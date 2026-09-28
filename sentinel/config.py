@@ -47,7 +47,9 @@ MODEL_THRESHOLD_OVERRIDE = float(_thr) if _thr else None
 IMPOSSIBLE_TRAVEL_KMH = 900.0
 IMPOSSIBLE_TRAVEL_MIN_KM = 200.0
 CARD_TESTING_TXNS_5M = 6
-CARD_TESTING_MAX_AMOUNT = 200.0   # INR — card-testing probes are tiny; bigger bursts are challenged, not blocked
+CARD_TESTING_MAX_AMOUNT = 200.0
+ATM_MAX_AMOUNT=100000
+# INR — card-testing probes are tiny; bigger bursts are challenged, not blocked
 VELOCITY_TXNS_1H = 12
 # velocity rules judge speed against the customer's own busiest allowed spell
 # once they have this many transactions of history ...
