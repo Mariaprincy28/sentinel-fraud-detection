@@ -20,6 +20,10 @@ from .config import (
     VELOCITY_TXNS_1H,
 )
 
+# Minimum number of transactions an entity (merchant / device / payee) must
+# have before its historical fraud rate is trusted enough to hard-block.
+ENTITY_MIN_TXNS_FOR_BLOCK = 20
+
 
 @dataclass(frozen=True)
 class RuleHit:
@@ -46,7 +50,11 @@ def evaluate_rules(feat: dict, txn: dict, baseline: dict | None = None) -> list[
     hits: list[RuleHit] = []
     f = feat  # shorthand
 
-    if f["impossible_travel"] >= 1.0:
+    # Guard: only meaningful when there is a previous transaction to compare
+    # against (first-ever transactions have no last location / timestamp).
+    if (f["impossible_travel"] >= 1.0
+            and f["secs_since_last"] > 0
+            and f["dist_from_last_km"] > 0):
         hits.append(RuleHit(
             "impossible_travel", "block",
             f"Impossible travel: {f['dist_from_last_km']:.0f} km in "
@@ -108,7 +116,11 @@ def evaluate_rules(feat: dict, txn: dict, baseline: dict | None = None) -> list[
             f"Unusual velocity: {int(f['txn_count_1h'])} transactions in the past hour",
         ))
 
-    if f.get("entity_max_fraud_rate", 0.0) >= ENTITY_FRAUD_RATE_BLOCK:
+    # Only trust an entity's fraud rate once it has enough history behind it.
+    # NOTE: requires features.py to supply "entity_txn_count"; if the key is
+    # missing it defaults to 0 and this rule will not fire.
+    if (f.get("entity_max_fraud_rate", 0.0) >= ENTITY_FRAUD_RATE_BLOCK
+            and f.get("entity_txn_count", 0.0) >= ENTITY_MIN_TXNS_FOR_BLOCK):
         hits.append(RuleHit(
             "known_bad_entity", "block",
             f"Merchant / device / payee on this transaction has a "
